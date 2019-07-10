@@ -268,6 +268,44 @@ namespace ACBC.Common
                 return ossDir;
             }
         }
+        #endregion
+        #region 携程相关
+
+        /// <summary>
+        /// 携程posCode
+        /// </summary>
+        public static string XCPOSCODE
+        {
+            get
+            {
+                var XCPosCode = System.Environment.GetEnvironmentVariable("XCPosCode");
+                return XCPosCode;
+            }
+        }
+
+        /// <summary>
+        /// 携程OpenId
+        /// </summary>
+        public static string XCOPENID
+        {
+            get
+            {
+                var XCOpenId = System.Environment.GetEnvironmentVariable("XCOpenId");
+                return XCOpenId;
+            }
+        }
+
+        /// <summary>
+        /// 携程Secret
+        /// </summary>
+        public static string XCSECRET
+        {
+            get
+            {
+                var XCSecret = System.Environment.GetEnvironmentVariable("XCSecret");
+                return XCSecret;
+            }
+        }
+        #endregion
     }
-    #endregion
 }

@@ -16,11 +16,26 @@ using System.Threading.Tasks;
 
 namespace ACBC.Buss
 {
-    public class PlanBuss : IBuss
+    public class TicketBuss : IBuss
     {
         public ApiType GetApiType()
         {
             return ApiType.PlanApi;
+        }
+        /// <summary>
+        /// 获取港口列表
+        /// </summary>
+        /// <param name="baseApi"></param>
+        /// <returns></returns>
+        public object Do_GetPort(BaseApi baseApi)
+        {
+            Port obj = JsonConvert.DeserializeObject<Port>(GetPostListData(Global.XCPOSCODE));
+            List<string> list = new List<string>();
+            foreach (var item in obj.PORTLIST)
+            {
+                list.Add(item.PORT_CNAME);
+            }
+            return list;
         }
 
         /// <summary>
@@ -183,13 +198,13 @@ namespace ACBC.Buss
             string error = "";
             if (param.passengerList.Count>5)
             {
-                openDao.writeLog(Global.POSCODE, openId, "PassengerNumError", "订票人超过5个");
+                openDao.writeLog(Global.XCPOSCODE, openId, "PassengerNumError", "订票人超过5个");
                 throw new ApiException(CodeMessage.PassengerNumError, "订票人超过5个");
             }
 
             foreach (Passenger passenger in param.passengerList)
             {
-                Passenger p = openDao.getPassenger(Global.POSCODE, openId, passenger.passengerId);
+                Passenger p = openDao.getPassenger(Global.XCPOSCODE, openId, passenger.passengerId);
                 if (p == null)
                 {
                     error += passenger.passengerName + "状态错误;";
@@ -220,13 +235,13 @@ namespace ACBC.Buss
             }
             if (error != "")
             {
-                openDao.writeLog(Global.POSCODE, openId, "BookingTicket", error);
+                openDao.writeLog(Global.XCPOSCODE, openId, "BookingTicket", error);
                 throw new ApiException(CodeMessage.CheckPassengerError, error);
             }
             //用第一个人的信息生成一个新的订单号
 
             string bookBillId = "";
-            string GetBookBillIdUserResult = GetBookBillIdUser(Global.POSCODE, param.passengerList[0].passengerName, param.mobile, param.passengerList[0].passengerCard, openId);
+            string GetBookBillIdUserResult = GetBookBillIdUser(Global.XCPOSCODE, param.passengerList[0].passengerName, param.mobile, param.passengerList[0].passengerCard, openId);
             WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(GetBookBillIdUserResult);
             if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
             {
@@ -234,7 +249,7 @@ namespace ACBC.Buss
             }
             else
             {
-                openDao.writeLog(Global.POSCODE, openId, "BookingTicket", web1.MESSAGE[0].MESSAGE);
+                openDao.writeLog(Global.XCPOSCODE, openId, "BookingTicket", web1.MESSAGE[0].MESSAGE);
                 throw new ApiException(CodeMessage.GetBillIdError, "GetBillIdError");
             }
             //订票
@@ -244,7 +259,7 @@ namespace ACBC.Buss
             {
                 allotType = "999";
             }
-            string BookTicketAutoByTicketResult = BookTicketAutoByTicketType(Global.POSCODE, param.planId, param.gradeId, allotType, ticketNum, bookBillId, ticketType);
+            string BookTicketAutoByTicketResult = BookTicketAutoByTicketType(Global.XCPOSCODE, param.planId, param.gradeId, allotType, ticketNum, bookBillId, ticketType);
             WebResult web2 = JsonConvert.DeserializeObject<WebResult>(BookTicketAutoByTicketResult);
             if (web2.MESSAGE[0].IS_SUCCESS == "TRUE")
             {
@@ -252,11 +267,11 @@ namespace ACBC.Buss
             }
             else
             {
-                openDao.writeLog(Global.POSCODE, openId, "BookingTicket", web2.MESSAGE[0].MESSAGE);
+                openDao.writeLog(Global.XCPOSCODE, openId, "BookingTicket", web2.MESSAGE[0].MESSAGE);
                 throw new ApiException(CodeMessage.BookTicketError, "BookTicketError");
             }
             //获取订票状态
-            string GetBookBillStateResult = GetBookBillStateNew(Global.POSCODE, bookBillId);
+            string GetBookBillStateResult = GetBookBillStateNew(Global.XCPOSCODE, bookBillId);
             WebBookBillStateResult web3 = JsonConvert.DeserializeObject<WebBookBillStateResult>(GetBookBillStateResult);
             if (web3.MESSAGE[0].IS_SUCCESS == "TRUE")
             {
@@ -266,7 +281,7 @@ namespace ACBC.Buss
                 for (int i = 0; i < billState.Count; i++)
                 {
                     billPrice += billState[i].FACT_PRICE;
-                    string AddTicketInfoResult = AddTicketInfo(Global.POSCODE, bookBillId, billState[i].TICKET_ID, param.passengerList[i].passengerName, param.passengerList[i].passengerCard);
+                    string AddTicketInfoResult = AddTicketInfo(Global.XCPOSCODE, bookBillId, billState[i].TICKET_ID, param.passengerList[i].passengerName, param.passengerList[i].passengerCard);
                     //WebResult web4 = JsonConvert.DeserializeObject<WebResult>(AddTicketInfoResult);
                     openDao.insertBillInfo(bookBillId, param.passengerList[i].passengerId, param.passengerList[i].passengerType,
                         param.passengerList[i].passengerName, param.passengerList[i].passengerCardType,
@@ -281,18 +296,18 @@ namespace ACBC.Buss
                 dtime = dtime.AddMinutes(Convert.ToInt16(times[1]));
                 string ARRIVE_TIME = dtime.ToString("yyyy-MM-dd HH:mm:ss");
 
-                if (!openDao.insertBillList(Global.POSCODE, openId, bookBillId, "1", param.passengerList[0].passengerName,
+                if (!openDao.insertBillList(Global.XCPOSCODE, openId, bookBillId, "1", param.passengerList[0].passengerName,
                                             param.passengerList[0].passengerTel, param.passengerList[0].passengerCard,
                                             billState[0].DEPARTURE_TIME, ARRIVE_TIME, billState[0].SHIP_NAME,
                                             ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID))
                 {
-                    openDao.writeLog(Global.POSCODE, openId, "InsertBillList", "InsertBillListError");
+                    openDao.writeLog(Global.XCPOSCODE, openId, "InsertBillList", "InsertBillListError");
                     throw new ApiException(CodeMessage.InsertBillListError, "InsertBillListError");
                 }
             }
             else
             {
-                openDao.writeLog(Global.POSCODE, openId, "GetBookBillState", web3.MESSAGE[0].MESSAGE);
+                openDao.writeLog(Global.XCPOSCODE, openId, "GetBookBillState", web3.MESSAGE[0].MESSAGE);
                 throw new ApiException(CodeMessage.GetBookBillStateError, "GetBookBillStateError");
             }
             //添加模板信息
@@ -303,7 +318,7 @@ namespace ACBC.Buss
             //}
             //catch (Exception ex)
             //{
-            //    openDao.writeLog(Global.POSCODE, openId, "BookingTicket", ex.ToString());
+            //    openDao.writeLog(Global.XCPOSCODE, openId, "BookingTicket", ex.ToString());
             //    throw new ApiException(CodeMessage.BookingTicketError, "BookingTicketError");
             //}
         }
@@ -378,7 +393,7 @@ namespace ACBC.Buss
             //处理10分取消未支付订单
             openDao.UpdateBookingStatusBy10Minute(openId);
 
-            return openDao.getBillList(Global.POSCODE, openId);
+            return openDao.getBillList(Global.XCPOSCODE, openId);
         }
         /// <summary>
         /// 列表数量显示
@@ -392,7 +407,7 @@ namespace ACBC.Buss
             //处理10分取消未支付订单
             openDao.UpdateBookingStatusBy10Minute(openId);
 
-            return openDao.getTicketNum(Global.POSCODE, openId);
+            return openDao.getTicketNum(Global.XCPOSCODE, openId);
         }
         /// <summary>
         /// 申请退订单
@@ -439,7 +454,7 @@ namespace ACBC.Buss
                 throw new ApiException(CodeMessage.RetrunBillStateError, "RetrunBillStateError");
             }
             bool checkTicketIdError = true;
-            string GetBookBillStateResult = GetBookBillStateNew(Global.POSCODE, param.billId);
+            string GetBookBillStateResult = GetBookBillStateNew(Global.XCPOSCODE, param.billId);
             WebBookBillStateResult web3 = JsonConvert.DeserializeObject<WebBookBillStateResult>(GetBookBillStateResult);
             if (web3.MESSAGE[0].IS_SUCCESS == "TRUE")
             {
@@ -557,7 +572,52 @@ namespace ACBC.Buss
         //    return pay;
         //}
 
+        /// <summary>
+        /// 获取码头
+        /// </summary>
+        /// <param name="posCode"></param>
+        /// <returns></returns>
+        public static String GetPostListData(string posCode)
+        {
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PtsUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pts.PtsServiceTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
 
+            ////发送请求
+            //var v = callClient.getPortAsync(posCode);
+
+            ////异步等待
+            //v.Wait();
+            ////获取数据
+            //result = v.Result;
+            //return result;
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pts.getPortRequestBody body = new pts.getPortRequestBody();
+
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pts.getPortRequest(body);
+            //发送请求
+            var v = callClient.getPortAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.getPortResult;
+
+
+            return result;
+        }
         /// <summary>
         /// 获取航期
         /// </summary>
@@ -581,7 +641,7 @@ namespace ACBC.Buss
             pts.getShipListByPortRequestBody body = new pts.getShipListByPortRequestBody();
 
             //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
-            body._posCode = Global.POSCODE;
+            body._posCode = Global.XCPOSCODE;
             body._dateFrom = posDateParam.dateFrom;
             body._dateTo = posDateParam.dateTo;
             body._port = posDateParam.port;
