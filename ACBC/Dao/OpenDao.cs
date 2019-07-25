@@ -222,6 +222,7 @@ namespace ACBC.Dao
                         passengerTypeName = ptn,
                         ticketId = dr1["ticketId"].ToString(),
                         ticketState = dr1["ticketState"].ToString(),
+                        refundFee =Convert.ToDouble( dr1["refundFee"].ToString()),
                     };
                     billInfoList.Add(billInfo);
                 }

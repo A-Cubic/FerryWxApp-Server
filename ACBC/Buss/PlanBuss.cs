@@ -282,7 +282,7 @@ namespace ACBC.Buss
                 string ARRIVE_TIME = dtime.ToString("yyyy-MM-dd HH:mm:ss");
 
                 if (!openDao.insertBillList(Global.POSCODE, openId, bookBillId, "1", param.passengerList[0].passengerName,
-                                            param.passengerList[0].passengerTel, param.passengerList[0].passengerCard,
+                                            param.mobile, param.passengerList[0].passengerCard,
                                             billState[0].DEPARTURE_TIME, ARRIVE_TIME, billState[0].SHIP_NAME,
                                             ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID))
                 {
