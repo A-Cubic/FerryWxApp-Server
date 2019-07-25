@@ -306,6 +306,17 @@ namespace ACBC.Common
                 return XCSecret;
             }
         }
+        /// <summary>
+        /// 商户posCode
+        /// </summary>
+        public static string XCALLOTTYPE
+        {
+            get
+            {
+                var xcallotType = System.Environment.GetEnvironmentVariable("XCAllotType");
+                return xcallotType;
+            }
+        }
         #endregion
     }
 }

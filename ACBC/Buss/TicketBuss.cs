@@ -59,7 +59,7 @@ namespace ACBC.Buss
                 throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
             }
 
-            ShipWeb obj = JsonConvert.DeserializeObject<ShipWeb>(GetShipListData(posDateParam, Global.ALLOTTYPE));
+            ShipWeb obj = JsonConvert.DeserializeObject<ShipWeb>(GetShipListData(posDateParam, Global.XCALLOTTYPE));
             Ship obj1 = new Ship();
             obj1.date = posDateParam.dateFrom.Insert(4, "-").Insert(7, "-");
             obj1.SHIPLIST = new List<SHIPLIST>();
@@ -152,7 +152,7 @@ namespace ACBC.Buss
         /// </summary>
         /// <param name="baseApi"></param>
         /// <returns></returns>
-        public object Do_BookingTicket(BaseApi baseApi)
+        public object Do_WebBookingTicket(BaseApi baseApi)
         {
             OpenDao openDao = new OpenDao();
             BookingTicketParam param = JsonConvert.DeserializeObject<BookingTicketParam>(baseApi.param.ToString());
@@ -191,9 +191,7 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.MemberStatusError, "MemberStatusError");
             }
-
-            //try
-            //{
+            
             //先判断订票用户和账号是否匹配。
             string error = "";
             if (param.passengerList.Count>5)
@@ -202,28 +200,28 @@ namespace ACBC.Buss
                 throw new ApiException(CodeMessage.PassengerNumError, "订票人超过5个");
             }
 
-            foreach (Passenger passenger in param.passengerList)
-            {
-                Passenger p = openDao.getPassenger(Global.XCPOSCODE, openId, passenger.passengerId);
-                if (p == null)
-                {
-                    error += passenger.passengerName + "状态错误;";
-                }
-                else
-                {
-                    passenger.passengerType = p.passengerType;
-                    passenger.passengerName = p.passengerName;
-                    passenger.passengerCard = p.passengerCard;
-                    passenger.passengerCardType = p.passengerCardType;
-                    passenger.passengerTel = p.passengerTel;
-                }
+            //foreach (Passenger passenger in param.passengerList)
+            //{
+            //    Passenger p = openDao.getPassenger(Global.XCPOSCODE, openId, passenger.passengerId);
+            //    if (p == null)
+            //    {
+            //        error += passenger.passengerName + "状态错误;";
+            //    }
+            //    else
+            //    {
+            //        passenger.passengerType = p.passengerType;
+            //        passenger.passengerName = p.passengerName;
+            //        passenger.passengerCard = p.passengerCard;
+            //        passenger.passengerCardType = p.passengerCardType;
+            //        passenger.passengerTel = p.passengerTel;
+            //    }
 
-                //判断用户是否订过同一航次
-                if (openDao.checkOnePlan(openId, param.planId, passenger.passengerId))
-                {
-                    throw new ApiException(CodeMessage.OnePlanError, "OnePlanError");
-                }
-            }
+            //    //判断用户是否订过同一航次
+            //    if (openDao.checkOnePlan(openId, param.planId, passenger.passengerId))
+            //    {
+            //        throw new ApiException(CodeMessage.OnePlanError, "OnePlanError");
+            //    }
+            //}
             //再判断是否都是一个等级
             string grade = param.passengerList[0].passengerType;
             foreach (Passenger passenger in param.passengerList)
@@ -241,7 +239,7 @@ namespace ACBC.Buss
             //用第一个人的信息生成一个新的订单号
 
             string bookBillId = "";
-            string GetBookBillIdUserResult = GetBookBillIdUser(Global.XCPOSCODE, param.passengerList[0].passengerName, param.mobile, param.passengerList[0].passengerCard, openId);
+            string GetBookBillIdUserResult = GetBookBillIdUser(Global.XCPOSCODE, param.name, param.mobile, param.card, openId);
             WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(GetBookBillIdUserResult);
             if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
             {
@@ -253,7 +251,7 @@ namespace ACBC.Buss
                 throw new ApiException(CodeMessage.GetBillIdError, "GetBillIdError");
             }
             //订票
-            string allotType = Global.ALLOTTYPE, ticketType = param.passengerList[0].passengerType;
+            string allotType = Global.XCALLOTTYPE, ticketType = param.passengerList[0].passengerType;
             int ticketNum = param.passengerList.Count;
             if (param.passengerList[0].passengerType == "004")
             {
@@ -310,17 +308,9 @@ namespace ACBC.Buss
                 openDao.writeLog(Global.XCPOSCODE, openId, "GetBookBillState", web3.MESSAGE[0].MESSAGE);
                 throw new ApiException(CodeMessage.GetBookBillStateError, "GetBookBillStateError");
             }
-            //添加模板信息
-            sendToBePayMessage(bookBillId);
             //返回订单号
 
             return bookBillId;
-            //}
-            //catch (Exception ex)
-            //{
-            //    openDao.writeLog(Global.XCPOSCODE, openId, "BookingTicket", ex.ToString());
-            //    throw new ApiException(CodeMessage.BookingTicketError, "BookingTicketError");
-            //}
         }
 
 
@@ -435,21 +425,25 @@ namespace ACBC.Buss
             BILLLIST billList = openDao.getBillListById(param.billId, openId);
             if (billList == null)
             {
-                throw new ApiException(CodeMessage.RetrunBillStateError, "RetrunBillStateError");
+                throw new ApiException(CodeMessage.RetrunBillStateError, "未查到订票信息");
             }
             if (billList.bookingState != "2")
             {
-                throw new ApiException(CodeMessage.RetrunBillStateError, "RetrunBillStateError");
+                throw new ApiException(CodeMessage.RetrunBillStateError, "订票状态错误");
             }
             DateTime dtime = Convert.ToDateTime(billList.beginDate+" "+billList.beginTime);
             //判断开船30分内不许退票
             if (dtime<DateTime.Now.AddMinutes(30))
             {
-                throw new ApiException(CodeMessage.RetrunBillStateError, "RetrunBillStateError");
+                throw new ApiException(CodeMessage.RetrunBillStateError, "开船30分内不许退票");
             }
             //判断是否已经打票
             BILLINFO billInfo = openDao.getBillInfoById(param.billId, param.id);
             if (billInfo==null)
+            {
+                throw new ApiException(CodeMessage.RetrunBillStateError, "退票信息不正确");
+            }
+            if (billInfo.ticketState != "2")
             {
                 throw new ApiException(CodeMessage.RetrunBillStateError, "RetrunBillStateError");
             }
@@ -490,7 +484,6 @@ namespace ACBC.Buss
                 if (!openDao.checkBillInfo(param.billId))
                 {
                     openDao.returnBooking(param.billId, openId);
-                    sendReturnTicketMessage(param.billId);
                 }
                 return true;
             }
@@ -538,39 +531,57 @@ namespace ACBC.Buss
             }
         }
 
-        ///// <summary>
-        ///// 调用支付
-        ///// </summary>
-        ///// <param name="baseApi"></param>
-        ///// <returns></returns>
-        //public object Do_Pay(BaseApi baseApi)
-        //{
-        //    BookingListParam param = JsonConvert.DeserializeObject<BookingListParam>(baseApi.param.ToString());
-        //    if (param == null)
-        //    {
-        //        throw new ApiException(CodeMessage.InvalidParam, "InvalidParam");
-        //    }
-        //    if (param.posCode == null || param.posCode == "")
-        //    {
-        //        throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
-        //    }
-        //    if (param.billId == null || param.billId == "")
-        //    {
-        //        throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
-        //    }
-        //    string openId = Utils.GetOpenID(baseApi.token);
-        //    OpenDao openDao = new OpenDao();
-        //    PAY pay = new PAY
-        //    {
-        //        appId = "1",
-        //        timeStamp = "2",
-        //        nonceStr = "3",
-        //        package = "4",
-        //        signType = "5",
-        //        paySign = "6",
-        //    };
-        //    return pay;
-        //}
+        /// <summary>
+        /// 调用支付
+        /// </summary>
+        /// <param name="baseApi"></param>
+        /// <returns></returns>
+        public object Do_PaymentDone(BaseApi baseApi)
+        {
+            PaymentDoneParam param = JsonConvert.DeserializeObject<PaymentDoneParam>(baseApi.param.ToString());
+            if (param == null)
+            {
+                throw new ApiException(CodeMessage.InvalidParam, "InvalidParam");
+            }
+            if (param.payId == null || param.payId == "")
+            {
+                throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
+            }
+            if (param.billId == null || param.billId == "")
+            {
+                throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
+            }
+            string openId = Utils.GetOpenID(baseApi.token);
+            PaymentDao pDao = new PaymentDao();
+            if (pDao.updateOrderForPay(param.billId, param.payId))
+            {
+                string SetPayIdResult = SetPayId(Global.XCPOSCODE, param.billId, param.payId);
+                WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(SetPayIdResult);
+                if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
+                {
+                    string PayTicketDoneResult = PayTicketDone(Global.XCPOSCODE, param.billId, param.payId);
+                    WebBillIdResult web2 = JsonConvert.DeserializeObject<WebBillIdResult>(PayTicketDoneResult);
+                    if (web2.MESSAGE[0].IS_SUCCESS == "TRUE")
+                    {
+                        pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-成功");
+                    }
+                    else
+                    {
+                        pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-确认付款失败");
+                    }
+                }
+                else
+                {
+                    pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-同步设置支付单号失败");
+                }
+
+            }
+            else
+            {
+                pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-修改订单状态失败");
+            }
+            return "";
+        }
 
         /// <summary>
         /// 获取码头
@@ -646,7 +657,7 @@ namespace ACBC.Buss
             body._dateTo = posDateParam.dateTo;
             body._port = posDateParam.port;
             body._allotType = allotType;
-            body._his = true;
+            body._his = false;
 
             //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
             var request = new pts.getShipListByPortRequest(body);
@@ -835,67 +846,86 @@ namespace ACBC.Buss
 
             return result;
         }
+        
         /// <summary>
-        /// 待支付
+        /// 设置付款单号
         /// </summary>
-        /// <param name="out_trade_no"></param>
+        /// <param name="posCode"></param>
         /// <returns></returns>
-        private bool sendToBePayMessage(string out_trade_no)
+        public static String SetPayId(string posCode, string billId, string payId)
         {
-            PaymentDao pDao = new PaymentDao();
-            try
-            {
-                PaymentDataResults paymentDataResults = pDao.getPayData(out_trade_no);
-                WxJsonResult wxJsonResult = TemplateApi.SendTemplateMessage(Global.APPID,
-                    paymentDataResults.openId,
-                    Global.ToBePayTemplate,
-                    new
-                    {
-                        keyword1 = new { value = paymentDataResults.billid },
-                        keyword2 = new { value = paymentDataResults.billPrice },
-                        keyword3 = new { value = paymentDataResults.billValue },
-                        keyword4 = new { value = paymentDataResults.bookingTime },
-                        keyword5 = new { value = "等待支付" },
-                        keyword6 = new { value = "请在半小时内完成付款" }
-                    },
-                    paymentDataResults.prePayId, null, "keyword4.DATA");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PayUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pay.PayTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
+
+
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pay.setPayIdRequestBody body = new pay.setPayIdRequestBody();
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+            body._billId = billId;
+            body._payId = payId;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pay.setPayIdRequest(body);
+            //发送请求
+            var v = callClient.setPayIdAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.setPayIdResult;
+
+
+            return result;
         }
         /// <summary>
-        /// 退票申请
+        /// 确认付款
         /// </summary>
-        /// <param name="out_trade_no"></param>
+        /// <param name="posCode"></param>
         /// <returns></returns>
-        private bool sendReturnTicketMessage(string out_trade_no)
+        public static String PayTicketDone(string posCode, string billId, string payId)
         {
-            PaymentDao pDao = new PaymentDao();
-            try
-            {
-                PaymentDataResults paymentDataResults = pDao.getPayData(out_trade_no);
-                double refundFee = Math.Round(Convert.ToDouble(paymentDataResults.billPrice) * 0.8, 2) ;
-                WxJsonResult wxJsonResult = TemplateApi.SendTemplateMessage(Global.APPID,
-                    paymentDataResults.openId,
-                    Global.ReturnTicketTemplate,
-                    new
-                    {
-                        keyword1 = new { value = paymentDataResults.billid },
-                        keyword2 = new { value = refundFee },
-                        keyword3 = new { value = paymentDataResults.refundTime },
-                        keyword4 = new { value = "退票申请中，等待商家处理" },
-                        keyword5 = new { value = "退款说明" }
-                    },
-                    paymentDataResults.prePayId, null, "keyword3.DATA");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PayUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pay.PayTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
+
+
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pay.payTicketDoneRequestBody body = new pay.payTicketDoneRequestBody();
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+            body._billId = billId;
+            body._payId = payId;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pay.payTicketDoneRequest(body);
+            //发送请求
+            var v = callClient.payTicketDoneAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.payTicketDoneResult;
+
+
+            return result;
         }
     }
 }

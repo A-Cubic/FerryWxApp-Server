@@ -168,6 +168,11 @@ namespace ACBC.Buss
     {
         public string billId; //
     }
+    public class PaymentDoneParam
+    {
+        public string billId; //
+        public string payId; //
+    }
     #endregion
 
     #region DaoObjs
@@ -383,6 +388,7 @@ namespace ACBC.Buss
         public string passengerTel;
         public string ticketId;
         public string ticketState;
+        public double refundFee;
     }
     public class PAY
     {

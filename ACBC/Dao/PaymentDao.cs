@@ -75,16 +75,27 @@ namespace ACBC.Dao
         /// <param name="payNo"></param>
         public bool updateOrderForPay(string billId, string payNo)
         {
-            StringBuilder builder1 = new StringBuilder();
-            builder1.AppendFormat(PaymentSqls.UPDATE_PAYINFO_BY_BILLLIST, payNo, billId);
-            string sql1 = builder1.ToString();
-
-            if (DatabaseOperationWeb.ExecuteDML(sql1))
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(PaymentSqls.SELECT_PREPAYID_BY_BILLID, billId);
+            string sql = builder.ToString();
+            DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
+            if (dt.Rows.Count > 0)
             {
-                StringBuilder builder2 = new StringBuilder();
-                builder2.AppendFormat(PaymentSqls.UPDATE_PAYINFO_BY_BILLINFO, billId);
-                string sql2 = builder2.ToString();
-                return DatabaseOperationWeb.ExecuteDML(sql2);
+                StringBuilder builder1 = new StringBuilder();
+                builder1.AppendFormat(PaymentSqls.UPDATE_PAYINFO_BY_BILLLIST, payNo, billId);
+                string sql1 = builder1.ToString();
+
+                if (DatabaseOperationWeb.ExecuteDML(sql1))
+                {
+                    StringBuilder builder2 = new StringBuilder();
+                    builder2.AppendFormat(PaymentSqls.UPDATE_PAYINFO_BY_BILLINFO, billId);
+                    string sql2 = builder2.ToString();
+                    return DatabaseOperationWeb.ExecuteDML(sql2);
+                }
+                else
+                {
+                    return false;
+                }
             }
             else
             {
