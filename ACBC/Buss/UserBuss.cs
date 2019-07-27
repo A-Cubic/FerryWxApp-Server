@@ -57,6 +57,10 @@ namespace ACBC.Buss
             //{
             //    throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
             //}
+            if (addPassengerParam.passengerType != "001")
+            {
+                throw new ApiException(CodeMessage.AddPassengerError, "AddPassengerError");
+            }
             string openId = Utils.GetOpenID(baseApi.token);
             UserDao userDao = new UserDao();
             if (addPassengerParam.passengerCardType == "1")

@@ -711,10 +711,10 @@ namespace ACBC.Dao
                 return false;
             }
         }
-        public bool checkOnePlan(string openId,string planId,string passengerId)
+        public bool checkOnePlan(string planId, string passengerCard)
         {
             StringBuilder builder = new StringBuilder();
-            builder.AppendFormat(OpenSqls.SELECT_BILLLIST_BY_OPENID_AND_PLANID, openId,planId, passengerId);
+            builder.AppendFormat(OpenSqls.SELECT_BILLLIST_BY_PLANID_AND_PASSENGERCARD, planId, passengerCard);
             string sql = builder.ToString();
             DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
             if (dt != null && dt.Rows.Count > 0)
@@ -823,14 +823,13 @@ namespace ACBC.Dao
                + "SELECT * "
                + "FROM T_BILL_INFO "
                + "WHERE  BILLID='{0}' AND TICKETSTATE='2'  ";
-            public const string SELECT_BILLLIST_BY_OPENID_AND_PLANID =
-                "SELECT * " +
-                "FROM T_BILL_LIST L,T_BILL_INFO I " +
-                "WHERE L.BILLID = I.BILLID " +
-                    "AND L.OPENID = '{0}' " +
-                    "AND L.PLANID = '{1}' " +
-                    "AND L.BOOKINGSTATE IN ('1','2','4') " +
-                    "AND I.PASSENGERID = '{2}'";
+            public const string SELECT_BILLLIST_BY_PLANID_AND_PASSENGERCARD =
+               "SELECT * " +
+               "FROM T_BILL_LIST L,T_BILL_INFO I " +
+               "WHERE L.BILLID = I.BILLID " +
+                   "AND L.PLANID = '{0}' " +
+                   "AND L.BOOKINGSTATE IN ('1','2','4') " +
+                   "AND I.PASSENGERCARD = '{1}'";
             public const string UPDATE_BOOKINGSTATUS_TO_THREE_BY_10MINUTE = "" +
                 "UPDATE T_BILL_LIST " +
                    "SET BOOKINGSTATE ='3' " +
