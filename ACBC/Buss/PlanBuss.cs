@@ -204,18 +204,26 @@ namespace ACBC.Buss
                 }
 
                 //判断用户是否订过同一航次
-                if (openDao.checkOnePlan(openId, param.planId, passenger.passengerId))
+                if (openDao.checkOnePlan(param.planId, passenger.passengerCard))
                 {
                     throw new ApiException(CodeMessage.OnePlanError, "OnePlanError");
                 }
             }
             //再判断是否都是一个等级
             string grade = param.passengerList[0].passengerType;
-            foreach (Passenger passenger in param.passengerList)
+            if (grade != "001")
             {
-                if (grade != passenger.passengerType)
+                error += "不支持除成人票以外的票种;";
+            }
+            else
+            {
+                foreach (Passenger passenger in param.passengerList)
                 {
-                    error += "不是同一个类型,一个订单只支持同一个类型的票;";
+                    if (grade != passenger.passengerType)
+                    {
+                        error += "不是同一个类型,一个订单只支持同一个类型的票;";
+                    }
+
                 }
             }
             if (error != "")
