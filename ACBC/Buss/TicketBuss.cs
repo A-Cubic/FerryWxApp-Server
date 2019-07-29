@@ -559,11 +559,7 @@ namespace ACBC.Buss
                 WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(SetPayIdResult);
                 if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
                 {
-<<<<<<< HEAD
                     string PayTicketDoneResult = PayTicketDone(Global.XCPOSCODE, param.billId, param.payId).Replace("\"Msg\":]", "\"Msg\":[]");
-=======
-                    string PayTicketDoneResult = PayTicketDone(Global.XCPOSCODE, param.billId, param.payId);
->>>>>>> c10ff3c485873814a4a01d4d9cc21524f1990349
                     WebBillIdResult web2 = JsonConvert.DeserializeObject<WebBillIdResult>(PayTicketDoneResult);
                     if (web2.MESSAGE[0].IS_SUCCESS == "TRUE")
                     {
@@ -571,30 +567,18 @@ namespace ACBC.Buss
                     }
                     else
                     {
-<<<<<<< HEAD
                         pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付失败-确认付款失败");
-=======
-                        pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-确认付款失败");
->>>>>>> c10ff3c485873814a4a01d4d9cc21524f1990349
                     }
                 }
                 else
                 {
-<<<<<<< HEAD
                     pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付失败-同步设置支付单号失败");
-=======
-                    pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-同步设置支付单号失败");
->>>>>>> c10ff3c485873814a4a01d4d9cc21524f1990349
                 }
 
             }
             else
             {
-<<<<<<< HEAD
                 pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付失败-修改订单状态失败");
-=======
-                pDao.insertPayLog(param.billId, param.payId, "0", openId, "携程支付完成-修改订单状态失败");
->>>>>>> c10ff3c485873814a4a01d4d9cc21524f1990349
             }
             return "";
         }
