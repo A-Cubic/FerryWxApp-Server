@@ -11,6 +11,21 @@ namespace ACBC.Dao
 {
     public class UserDao
     {
+        public string getLastPhone(string posCode,string openId)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(ShipSqls.SELECT_LASTPHONE_BY_POSCODE_AND_OPENID, posCode, openId);
+            string sql = builder.ToString();
+            DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
+            if (dt != null)
+            {
+                if (dt.Rows.Count>0)
+                {
+                    return dt.Rows[0][0].ToString();
+                }
+            }
+            return "";
+        }
 
         public List<Banner> getBanner(string posCode)
         {
@@ -191,6 +206,13 @@ namespace ACBC.Dao
 
         public class ShipSqls
         {
+            public const string SELECT_LASTPHONE_BY_POSCODE_AND_OPENID = "" +
+                "SELECT BOOKINGPHONE " +
+                "FROM T_BILL_LIST " +
+                "WHERE POSCODE = '{0}' " +
+                "AND OPENID = '{1}' " +
+                "AND BOOKINGPHONE<>'' " +
+                "ORDER BY ID DESC LIMIT 1";
             public const string INSERT_TEST = "insert into test(val) values('{0}') ";
             public const string SELECT_BANNER_BY_POSCODE = "SELECT * FROM T_ADV_LIST WHERE FLAG='1' AND POSCODE = '{0}' AND ADVTYPE ='{1}' ORDER BY ID DESC ";
             public const string SELECT_PASSENGER_BY_POSCODE_AND_OPENID = "SELECT * FROM T_PASSENGER_LIST " +

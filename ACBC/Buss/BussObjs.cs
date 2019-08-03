@@ -151,6 +151,7 @@ namespace ACBC.Buss
         public string name;
         public string card;
         public string mobile;
+        public string formId;
         public List<Passenger> passengerList;
     }
     public class BookingListParam
@@ -370,6 +371,7 @@ namespace ACBC.Buss
         public string bookingCard;
         public string prePayId;
         public string prePayTime;
+        public string payNo;
         public List<BILLINFO> billInfoList;
     }
     public class BILLINFO
@@ -443,6 +445,7 @@ namespace ACBC.Buss
         public string payNo;
         public string refundFee;
         public string refundTime;
+        public string formId;
     }
     #endregion
 }

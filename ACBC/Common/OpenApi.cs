@@ -16,6 +16,8 @@ namespace ACBC.Common
         UserApi,
         PaymentApi,
         PlanApi,
+        WXOpenApi,
+        TicketApi,
     }
 
     public enum CheckType
@@ -98,6 +100,26 @@ namespace ACBC.Common
             return ApiType.OpenApi;
         }
     }
+    /// <summary>
+    /// 完全开放
+    /// </summary>
+    public class WXOpenApi : BaseApi
+    {
+        public override CheckType GetCheckType()
+        {
+            return CheckType.Open;
+        }
+
+        public override InputType GetInputType()
+        {
+            return InputType.Body;
+        }
+
+        public override ApiType GetApiType()
+        {
+            return ApiType.WXOpenApi;
+        }
+    }
 
     /// <summary>
     /// 完全开放
@@ -158,6 +180,26 @@ namespace ACBC.Common
         public override ApiType GetApiType()
         {
             return ApiType.PlanApi;
+        }
+    }
+    /// <summary>
+    /// 完全开放
+    /// </summary>
+    public class TicketApi : BaseApi
+    {
+        public override CheckType GetCheckType()
+        {
+            return CheckType.Token;
+        }
+
+        public override InputType GetInputType()
+        {
+            return InputType.Body;
+        }
+
+        public override ApiType GetApiType()
+        {
+            return ApiType.TicketApi;
         }
     }
 }

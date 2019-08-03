@@ -94,22 +94,24 @@ namespace ACBC.Dao
         public bool insertBillList(string posCode, string openId, string billId, string bookingState,
                                             string bookingName, string bookingPhone, string bookingCard,
                                             string beginTime, string endTime, string shipName, string beginPort,
-                                            string endPort, int ticketNum, int billPrice,string planId)
+                                            string endPort, int ticketNum, int billPrice,string planId,string formId)
         {
             StringBuilder builder = new StringBuilder();
             builder.AppendFormat(OpenSqls.INSERT_BILLLIST, posCode, openId, billId, bookingState, bookingName, bookingPhone,
-                                    bookingCard, beginTime, endTime, shipName, beginPort, endPort, ticketNum, billPrice,planId);
+                                    bookingCard, beginTime, endTime, shipName, beginPort, endPort, ticketNum, billPrice,planId,formId);
             string sql = builder.ToString();
             return DatabaseOperationWeb.ExecuteDML(sql);
         }
 
         public bool insertBillInfo(string billId, string passengerId, string passengerType, string passengerName,
                                            string passengerCardType, string passengerCard, string passengerTel,
-                                           string bunkGradeName, string bunkCode, int factPrice, string ticketId)
+                                           string bunkGradeName, string bunkCode, int factPrice, string ticketId,
+                                           string markCode)
         {
             StringBuilder builder = new StringBuilder();
             builder.AppendFormat(OpenSqls.INSERT_BILLINFO, billId, passengerId, passengerType, passengerName,
-                                    passengerCardType, passengerCard, passengerTel, bunkGradeName, bunkCode, factPrice,ticketId);
+                                    passengerCardType, passengerCard, passengerTel, bunkGradeName, bunkCode,
+                                    factPrice,ticketId,markCode);
             string sql = builder.ToString();
             return DatabaseOperationWeb.ExecuteDML(sql);
         }
@@ -272,6 +274,7 @@ namespace ACBC.Dao
                     prePayId = dr["prePayId"].ToString(),
                     prePayTime = dr["prePayTime"].ToString(),
                     billInfoList = billInfoList,
+                    payNo = dr["payNo"].ToString(),
                 };
             }
             return billList;
@@ -673,20 +676,38 @@ namespace ACBC.Dao
             return billInfo;
         }
 
-        public bool returnBooking(string billId, string openId)
+        public bool returnBooking(string billId, string openId, string state)
         {
             StringBuilder builder = new StringBuilder();
-            builder.AppendFormat(OpenSqls.RETURN_BILLLIST, billId, openId, "4");
+            builder.AppendFormat(OpenSqls.RETURN_BILLLIST, billId, openId, state);
             string sql = builder.ToString();
             return DatabaseOperationWeb.ExecuteDML(sql);
         }
-        public bool returnTicket(string billId, string openId, string id)
+        public bool returnTicket(string billId, string openId, string id,string state)
         {
             StringBuilder builder = new StringBuilder();
-            builder.AppendFormat(OpenSqls.RETURN_BILLINFO, billId, id, "4");
+            builder.AppendFormat(OpenSqls.RETURN_BILLINFO, billId, id, state);
             string sql = builder.ToString();
             return DatabaseOperationWeb.ExecuteDML(sql);
         }
+
+
+
+        public bool UpdateBillListByRetrun(string billId, string openId, string state,string refundId,string price)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(OpenSqls.UPDATE_BILLLIST_BY_RETURN, billId, openId, state, refundId,price);
+            string sql = builder.ToString();
+            return DatabaseOperationWeb.ExecuteDML(sql);
+        }
+        public bool UpdateBillInfoByRetrun(string billId, string id,  string state,string price)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(OpenSqls.UPDATE_BILLINFO_BY_RETURN, billId, id, state,price);
+            string sql = builder.ToString();
+            return DatabaseOperationWeb.ExecuteDML(sql);
+        }
+
 
         public bool returnBill(string billId, string openId)
         {
@@ -733,7 +754,55 @@ namespace ACBC.Dao
             string sql = builder.ToString();
             return DatabaseOperationWeb.ExecuteDML(sql);
         }
+        public bool insertPayLog(string orderId, string payNo, string totalPrice, string openid, string status)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(OpenSqls.INSERT_PAYLOG, orderId, payNo, totalPrice, openid, status);
+            string sql = builder.ToString();
+            return DatabaseOperationWeb.ExecuteDML(sql);
+        }
 
+        public bool ifBooking(string planId,string minute)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(OpenSqls.IF_BOOKING, planId);
+            string sql = builder.ToString();
+            DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
+            if (dt != null&&dt.Rows[0][0].ToString()=="0")
+            {
+                return true;
+            }
+            else
+            {
+                StringBuilder builder1 = new StringBuilder();
+                builder1.AppendFormat(OpenSqls.IF_BOOKING_BY_TIME, planId, minute);
+                string sql1 = builder1.ToString();
+                DataTable dt1 = DatabaseOperationWeb.ExecuteSelectDS(sql1, "T").Tables[0];
+                if (dt1 != null && dt1.Rows[0][0].ToString() != "0")
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+
+        public string getBillInfoReturnFee( string billId)
+        {
+            string returnFee = "";
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(OpenSqls.SELECT_RETURNFEE_BY_BILLID, billId);
+            string sql = builder.ToString();
+            DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
+            if (dt != null && dt.Rows.Count == 1)
+            {
+                returnFee = dt.Rows[0][0].ToString();
+            }
+
+            return returnFee;
+        }
 
         public class OpenSqls
         {
@@ -758,14 +827,15 @@ namespace ACBC.Dao
             public const string INSERT_BILLLIST = ""
                 + "INSERT INTO T_BILL_LIST "
                 + "(POSCODE,OPENID,BILLID,BOOKINGSTATE,BOOKINGTIME,BOOKINGNAME,BOOKINGPHONE,BOOKINGCARD," +
-                "BEGINTIME,ENDTIME,SHIPNAME,BEGINPORT,ENDPORT,TICKETNUM,BILLPRICE,PLANID)"
+                "BEGINTIME,ENDTIME,SHIPNAME,BEGINPORT,ENDPORT,TICKETNUM,BILLPRICE,PLANID,FORMID)"
                 + "VALUES( "
-                + "'{0}','{1}','{2}','{3}',now(),'{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}')";
+                + "'{0}','{1}','{2}','{3}',now(),'{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}')";
             public const string INSERT_BILLINFO = ""
                 + "INSERT INTO T_BILL_INFO "
-                + "(BILLID,PASSENGERID,PASSENGERTYPE,PASSENGERNAME,PASSENGERCARDTYPE,PASSENGERCARD,PASSENGERTEL,BUNKGRADENAME,BUNKCODE,FACTPRICE,TICKETID,TICKETSTATE)"
+                + "(BILLID,PASSENGERID,PASSENGERTYPE,PASSENGERNAME,PASSENGERCARDTYPE,PASSENGERCARD,"
+                + "PASSENGERTEL,BUNKGRADENAME,BUNKCODE,FACTPRICE,TICKETID,TICKETSTATE,MARKCODE)"
                 + "VALUES( "
-                + "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}',{9},'{10}','1')";
+                + "'{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}',{9},'{10}','1','{11}')";
 
             public const string SELECT_BILLLIST_BY_POSCODE_STATE = ""
                + "SELECT * "
@@ -819,6 +889,13 @@ namespace ACBC.Dao
             public const string RETURN_BILLINFO = ""
                 + " UPDATE T_BILL_INFO SET TICKETSTATE='{2}' WHERE BILLID= '{0}'  AND ID={1} ";
 
+            public const string UPDATE_BILLLIST_BY_RETURN = ""
+                + " UPDATE T_BILL_LIST SET BOOKINGSTATE='{2}',REFUNDID = '{3}'" +
+                                ",REFUNDFEE={4} ,refundTime = now()  " +
+                "WHERE BILLID= '{0}' AND  OPENID = '{1}' ";
+            public const string UPDATE_BILLINFO_BY_RETURN = ""
+                + " UPDATE T_BILL_INFO SET TICKETSTATE='{2}',REFUNDFEE={3} WHERE BILLID= '{0}'  AND ID={1} ";
+
             public const string CHECK_BILLINFO_BY_BILLID_AND_STATE = ""
                + "SELECT * "
                + "FROM T_BILL_INFO "
@@ -836,6 +913,21 @@ namespace ACBC.Dao
                  "WHERE OPENID = '{0}' " +
                    "AND BOOKINGSTATE = '1' " +
                    "AND BOOKINGTIME< DATE_ADD(NOW(), INTERVAL - 10 MINUTE)";
+            public const string INSERT_PAYLOG = "" +
+                "INSERT INTO T_LOG_PAY(ORDERID,PAYTYPE,PAYNO,TOTALPRICE,OPENID,CREATETIME,STATUS) " +
+                   "VALUES('{0}','微信支付','{1}',{2},'{3}',NOW(),'{4}')";
+            public const string IF_BOOKING = "" +
+                "SELECT COUNT(*) FROM T_BILL_LIST  " +
+                "WHERE PLANID ='{0}' ";
+            public const string IF_BOOKING_BY_TIME = "" +
+                "SELECT COUNT(*) FROM T_BILL_LIST  " +
+                "WHERE PLANID ='{0}' " +
+                "AND BEGINTIME>DATE_ADD(NOW(),INTERVAL {1} MINUTE)";
+
+            public const string SELECT_RETURNFEE_BY_BILLID = ""
+               + "SELECT SUM(REFUNDFEE) AS REFUNDFEE "
+               + "FROM T_BILL_INFO "
+               + "WHERE  BILLID='{0}' AND TICKETSTATE='5'   ";
         }
     }
 }

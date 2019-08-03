@@ -144,6 +144,53 @@ namespace ACBC.Common
         }
 
         /// <summary>
+        /// 公众号ID
+        /// </summary>
+        public static string WxPaymentAppID
+        {
+            get
+            {
+                var wxPaymentAppID = System.Environment.GetEnvironmentVariable("WxPaymentAppID");
+                return wxPaymentAppID;
+            }
+        }
+
+        /// <summary>
+        /// 开船前可以售票时间
+        /// </summary>
+        public static string IfBookingTime
+        {
+            get
+            {
+                var ifBookingTime = System.Environment.GetEnvironmentVariable("IfBookingTime");
+                return ifBookingTime;
+            }
+        }
+        /// <summary>
+        /// 证书路径
+        /// </summary>
+        public static string SSlCertPath
+        {
+            get
+            {
+                var sSlCertPath = System.Environment.GetEnvironmentVariable("SSlCertPath");
+                return sSlCertPath;
+            }
+        }
+
+        /// <summary>
+        /// 证书密码
+        /// </summary>
+        public static string SSlCertPassword
+        {
+            get
+            {
+                var sSlCertPassword = System.Environment.GetEnvironmentVariable("SSlCertPassword");
+                return sSlCertPassword;
+            }
+        }
+
+        /// <summary>
         /// 支付成功消息模板
         /// </summary>
         public static string PaySuccessTemplate
@@ -315,6 +362,17 @@ namespace ACBC.Common
             {
                 var xcallotType = System.Environment.GetEnvironmentVariable("XCAllotType");
                 return xcallotType;
+            }
+        }
+        /// <summary>
+        /// 开船前可以售票时间
+        /// </summary>
+        public static string XCIfBookingTime
+        {
+            get
+            {
+                var xCIfBookingTime = System.Environment.GetEnvironmentVariable("XCIfBookingTime");
+                return xCIfBookingTime;
             }
         }
         #endregion

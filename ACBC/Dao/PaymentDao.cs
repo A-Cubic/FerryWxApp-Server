@@ -61,6 +61,7 @@ namespace ACBC.Dao
                     payNo = dt.Rows[0]["payNo"].ToString(),
                     refundFee = dt.Rows[0]["refundFee"].ToString(),
                     refundTime = dt.Rows[0]["refundTime"].ToString(),
+                    formId = dt.Rows[0]["formId"].ToString(),
                 };
             }
             return paymentDataResults;

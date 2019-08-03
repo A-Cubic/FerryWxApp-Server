@@ -18,6 +18,18 @@ namespace ACBC.Buss
         {
             return ApiType.UserApi;
         }
+        /// <summary>
+        /// 获取上次电话
+        /// </summary>
+        /// <param name="baseApi"></param>
+        /// <returns></returns>
+        public object Do_GetLastPhone(BaseApi baseApi)
+        {
+            UserDao userDao = new UserDao();
+            string openId = Utils.GetOpenID(baseApi.token);
+
+            return userDao.getLastPhone(Global.POSCODE, openId);
+        }
 
         /// <summary>
         /// 获取乘客列表

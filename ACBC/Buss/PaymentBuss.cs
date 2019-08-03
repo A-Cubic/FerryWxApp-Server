@@ -188,36 +188,7 @@ namespace ACBC.Buss
                         keyword4 = new { value = paymentDataResults.bookingTime },
                         keyword5 = new { value = paymentDataResults.bookingState }
                     },
-                    paymentDataResults.prePayId, null, "keyword4.DATA");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-        }
-        /// <summary>
-        /// 退票成功
-        /// </summary>
-        /// <param name="out_trade_no"></param>
-        /// <returns></returns>
-        private bool sendReturnSuccessMessage(string out_trade_no)
-        {
-            try
-            {
-                PaymentDataResults paymentDataResults = pDao.getPayData(out_trade_no);
-                WxJsonResult wxJsonResult = TemplateApi.SendTemplateMessage(Global.APPID,
-                    paymentDataResults.openId,
-                    Global.ReturnSuccessTemplate,
-                    new
-                    {
-                        keyword1 = new { value = paymentDataResults.billid },
-                        keyword2 = new { value = paymentDataResults.refundFee },
-                        keyword3 = new { value = paymentDataResults.refundTime },
-                        keyword4 = new { value = "退票申请审核通过，已退款" },
-                        keyword5 = new { value = "如有退票手续费，船票金额减去退票手续费后，剩余金额会按原路返回付款账户！" }
-                    },
-                    paymentDataResults.prePayId, null, "keyword3.DATA");
+                    paymentDataResults.prePayId, "/pages/orderList/orderList?num=1", "keyword4.DATA");
                 return true;
             }
             catch (Exception ex)

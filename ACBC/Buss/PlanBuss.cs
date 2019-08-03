@@ -161,6 +161,10 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
             }
+            if (param.formId == null )
+            {
+                param.formId = "";
+            }
             if (param.passengerList == null || param.passengerList.Count == 0)
             {
                 throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
@@ -176,7 +180,10 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.MemberStatusError, "MemberStatusError");
             }
-
+            if (!openDao.ifBooking(param.planId,Global.IfBookingTime))
+            {
+                throw new ApiException(CodeMessage.BookingTicketError, "BookingTicketError");
+            }
             //try
             //{
             //先判断订票用户和账号是否匹配。
@@ -279,7 +286,8 @@ namespace ACBC.Buss
                     openDao.insertBillInfo(bookBillId, param.passengerList[i].passengerId, param.passengerList[i].passengerType,
                         param.passengerList[i].passengerName, param.passengerList[i].passengerCardType,
                         param.passengerList[i].passengerCard, param.passengerList[i].passengerTel,
-                        billState[i].BUNK_GRADE_NAME, billState[i].BUNK_CODE, billState[i].FACT_PRICE, billState[i].TICKET_ID);
+                        billState[i].BUNK_GRADE_NAME, billState[i].BUNK_CODE, billState[i].FACT_PRICE, 
+                        billState[i].TICKET_ID, billState[i].MARK_CODE);
                 }
                 //订票成功后添加一条记录在mysql里
                 string[] ports = billState[0].SEAROUTE_NAME.Split("-");
@@ -292,7 +300,7 @@ namespace ACBC.Buss
                 if (!openDao.insertBillList(Global.POSCODE, openId, bookBillId, "1", param.passengerList[0].passengerName,
                                             param.mobile, param.passengerList[0].passengerCard,
                                             billState[0].DEPARTURE_TIME, ARRIVE_TIME, billState[0].SHIP_NAME,
-                                            ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID))
+                                            ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID,param.formId))
                 {
                     openDao.writeLog(Global.POSCODE, openId, "InsertBillList", "InsertBillListError");
                     throw new ApiException(CodeMessage.InsertBillListError, "InsertBillListError");
@@ -478,19 +486,91 @@ namespace ACBC.Buss
 
 
 
-            if (openDao.returnTicket(param.billId, openId, param.id))
+            if (openDao.returnTicket(param.billId, openId, param.id, "4"))
             {
                 if (!openDao.checkBillInfo(param.billId))
                 {
-                    openDao.returnBooking(param.billId, openId);
+                    openDao.returnBooking(param.billId, openId, "4");
                     sendReturnTicketMessage(param.billId);
                 }
-                return true;
             }
             else
             {
                 throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
             }
+
+            string ReturnBookTicketResult = ReturnBookTicket(Global.POSCODE, billInfo.ticketId, param.billId, "0001");
+            WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(ReturnBookTicketResult);
+            if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
+            {
+                double price = billList.billPrice * 100;
+                double refundFee = Math.Round(billInfo.factPrice * 0.2, 1);
+                double amount = Math.Round(billInfo.factPrice * 0.8*100, 1);
+                string out_refund_no = billInfo.ticketId.Substring(4);
+                string result = WxPayRefund.Run(billList.payNo, param.billId, out_refund_no, price.ToString(), amount.ToString());
+                //string result = WxPayRefund.Run("4200000349201907300338688862", "YYG-0000143985", out_refund_no, "100", "10");
+
+                try
+                {
+                    WxPayData wxPayData = new WxPayData();
+                    SortedDictionary<string, object> sd = wxPayData.FromXml(result);
+                    if (sd.Count != 0)
+                    {
+                        string refundId = sd["refund_id"].ToString();
+                        string outRefundNo = sd["out_refund_no"].ToString();
+                        double refundPrice = Convert.ToDouble(sd["refund_fee"]) / 100;
+                        if (outRefundNo == out_refund_no)
+                        {
+                            if (openDao.UpdateBillInfoByRetrun(param.billId, param.id, "5", refundFee.ToString()))
+                            {
+                                string returnFee = openDao.getBillInfoReturnFee(param.billId);
+                                if (!openDao.checkBillInfo(param.billId))
+                                {
+                                    openDao.UpdateBillListByRetrun(param.billId, openId, "5", refundId, returnFee);
+                                    sendReturnTicketMessage(param.billId);
+                                }
+                                else
+                                {
+                                    openDao.UpdateBillListByRetrun(param.billId, openId, "2", refundId, returnFee);
+                                }
+                                return true;
+                            }
+                            else
+                            {
+                                throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                            }
+                        }
+                        else
+                        {
+                            openDao.insertPayLog(param.billId, billList.payNo, amount.ToString(), "", "退票操作-失败:商户订单号对应不上");
+                            throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                        }
+                    }
+                    else
+                    {
+                        openDao.insertPayLog(param.billId, billList.payNo, amount.ToString(), "", "退票操作-失败:" + result);
+                        throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                    }
+                }
+                catch (WxPayException ex)
+                {
+                    openDao.insertPayLog(param.billId, billList.payNo, amount.ToString(), "", "退票操作-失败:" + ex.ToString());
+                    throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                }
+                catch (Exception ex)
+                {
+                    openDao.insertPayLog(param.billId, billList.payNo, amount.ToString(), "", "退票操作-失败:" + ex.ToString());
+                    throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                }
+                
+            }
+            else
+            {
+                openDao.writeLog(Global.POSCODE, openId, "BookingTicket", web1.MESSAGE[0].MESSAGE);
+                throw new ApiException(CodeMessage.GetBillIdError, "GetBillIdError");
+            }
+
+            
         }
 
         /// <summary>
@@ -594,7 +674,7 @@ namespace ACBC.Buss
             body._dateTo = posDateParam.dateTo;
             body._port = posDateParam.port;
             body._allotType = allotType;
-            body._his = true;
+            body._his = false;
 
             //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
             var request = new pts.getShipListByPortRequest(body);
@@ -783,6 +863,52 @@ namespace ACBC.Buss
 
             return result;
         }
+
+
+        /// <summary>
+        /// 按票号退票
+        /// </summary>
+        /// <param name="posDateParam"></param>
+        /// <returns></returns>
+        public static String ReturnBookTicket(string posCode, string ticketId, string bookBillId, string returnType)
+        {
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PtsUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pts1.PtsServiceTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
+
+
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pts1.returnBookTicketRequestBody body = new pts1.returnBookTicketRequestBody();
+
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+            body._bookBillId = bookBillId;
+            body._ticketId = ticketId;
+            body._returnType = returnType;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pts1.returnBookTicketRequest(body);
+            //发送请求
+            var v = callClient.returnBookTicketAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.returnBookTicketResult;
+
+
+            return result;
+        }
+
+
         /// <summary>
         /// 待支付
         /// </summary>
@@ -803,10 +929,10 @@ namespace ACBC.Buss
                         keyword2 = new { value = paymentDataResults.billPrice },
                         keyword3 = new { value = paymentDataResults.billValue },
                         keyword4 = new { value = paymentDataResults.bookingTime },
-                        keyword5 = new { value = "等待支付" },
-                        keyword6 = new { value = "请在半小时内完成付款" }
+                        keyword5 = new { value = "待支付" },
+                        keyword6 = new { value = "船票已预订，请在10分钟内付款，否则船票会被回收！" }
                     },
-                    paymentDataResults.prePayId, null, "keyword4.DATA");
+                    paymentDataResults.formId, "/pages/orderList/orderList?num=0", "keyword3.DATA");
                 return true;
             }
             catch (Exception ex)
@@ -837,7 +963,7 @@ namespace ACBC.Buss
                         keyword4 = new { value = "退票申请中，等待商家处理" },
                         keyword5 = new { value = "退款说明" }
                     },
-                    paymentDataResults.prePayId, null, "keyword3.DATA");
+                    paymentDataResults.formId, "/pages/orderList/orderList?num=1", "keyword3.DATA");
                 return true;
             }
             catch (Exception ex)
@@ -845,5 +971,6 @@ namespace ACBC.Buss
                 return false;
             }
         }
+
     }
 }

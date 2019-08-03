@@ -18,7 +18,7 @@ namespace ACBC.Controllers
     public class ShipWebController : Controller
     {
         [HttpPost]
-        public ActionResult TokenOpen([FromBody]OpenApi openApi)
+        public ActionResult TokenOpen([FromBody]WXOpenApi openApi)
         {
             Console.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\n\r");
             if (openApi == null)
@@ -26,12 +26,12 @@ namespace ACBC.Controllers
             return Json(Global.BUSS.BussResults(this, openApi));
         }
         [HttpPost]
-        public ActionResult Ticket([FromBody]PlanApi PlanApi)
+        public ActionResult Ticket([FromBody]TicketApi TicketApi)
         {
             Console.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\n\r");
-            if (PlanApi == null)
+            if (TicketApi == null)
                 return Json(new ResultsJson(new Message(CodeMessage.PostNull, "PostNull"), null));
-            return Json(Global.BUSS.BussResults(this, PlanApi));
+            return Json(Global.BUSS.BussResults(this, TicketApi));
         }
     }
 }

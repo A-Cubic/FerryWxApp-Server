@@ -20,7 +20,7 @@ namespace ACBC.Buss
     {
         public ApiType GetApiType()
         {
-            return ApiType.PlanApi;
+            return ApiType.TicketApi;
         }
         /// <summary>
         /// 获取港口列表
@@ -191,7 +191,11 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.MemberStatusError, "MemberStatusError");
             }
-            
+
+            if (!openDao.ifBooking(param.planId, Global.XCIfBookingTime))
+            {
+                throw new ApiException(CodeMessage.BookingTicketError, "BookingTicketError");
+            }
             //先判断订票用户和账号是否匹配。
             string error = "";
             if (param.passengerList.Count>5)
@@ -199,29 +203,16 @@ namespace ACBC.Buss
                 openDao.writeLog(Global.XCPOSCODE, openId, "PassengerNumError", "订票人超过5个");
                 throw new ApiException(CodeMessage.PassengerNumError, "订票人超过5个");
             }
+            
 
-            //foreach (Passenger passenger in param.passengerList)
-            //{
-            //    Passenger p = openDao.getPassenger(Global.XCPOSCODE, openId, passenger.passengerId);
-            //    if (p == null)
-            //    {
-            //        error += passenger.passengerName + "状态错误;";
-            //    }
-            //    else
-            //    {
-            //        passenger.passengerType = p.passengerType;
-            //        passenger.passengerName = p.passengerName;
-            //        passenger.passengerCard = p.passengerCard;
-            //        passenger.passengerCardType = p.passengerCardType;
-            //        passenger.passengerTel = p.passengerTel;
-            //    }
-
-            //    //判断用户是否订过同一航次
-            //    if (openDao.checkOnePlan(openId, param.planId, passenger.passengerId))
-            //    {
-            //        throw new ApiException(CodeMessage.OnePlanError, "OnePlanError");
-            //    }
-            //}
+            foreach (Passenger passenger in param.passengerList)
+            {
+                //判断用户是否订过同一航次
+                if (openDao.checkOnePlan(param.planId, passenger.passengerCard))
+                {
+                    throw new ApiException(CodeMessage.OnePlanError, "OnePlanError");
+                }
+            }
             //再判断是否都是一个等级
             string grade = param.passengerList[0].passengerType;
             foreach (Passenger passenger in param.passengerList)
@@ -284,7 +275,8 @@ namespace ACBC.Buss
                     openDao.insertBillInfo(bookBillId, param.passengerList[i].passengerId, param.passengerList[i].passengerType,
                         param.passengerList[i].passengerName, param.passengerList[i].passengerCardType,
                         param.passengerList[i].passengerCard, param.passengerList[i].passengerTel,
-                        billState[i].BUNK_GRADE_NAME, billState[i].BUNK_CODE, billState[i].FACT_PRICE, billState[i].TICKET_ID);
+                        billState[i].BUNK_GRADE_NAME, billState[i].BUNK_CODE, billState[i].FACT_PRICE,
+                        billState[i].TICKET_ID, billState[i].MARK_CODE);
                 }
                 //订票成功后添加一条记录在mysql里
                 string[] ports = billState[0].SEAROUTE_NAME.Split("-");
@@ -297,7 +289,7 @@ namespace ACBC.Buss
                 if (!openDao.insertBillList(Global.XCPOSCODE, openId, bookBillId, "1", param.passengerList[0].passengerName,
                                             param.passengerList[0].passengerTel, param.passengerList[0].passengerCard,
                                             billState[0].DEPARTURE_TIME, ARRIVE_TIME, billState[0].SHIP_NAME,
-                                            ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID))
+                                            ports[0], ports[1], billState.Count, billPrice, billState[0].PLAN_ID,""))
                 {
                     openDao.writeLog(Global.XCPOSCODE, openId, "InsertBillList", "InsertBillListError");
                     throw new ApiException(CodeMessage.InsertBillListError, "InsertBillListError");
@@ -479,18 +471,44 @@ namespace ACBC.Buss
 
 
 
-            if (openDao.returnTicket(param.billId, openId, param.id))
+            if (openDao.returnTicket(param.billId, openId, param.id,"4"))
             {
                 if (!openDao.checkBillInfo(param.billId))
                 {
-                    openDao.returnBooking(param.billId, openId);
+                    openDao.returnBooking(param.billId, openId, "4");
                 }
-                return true;
             }
             else
             {
                 throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
             }
+            string ReturnBookTicketResult = ReturnBookTicket(Global.POSCODE, billInfo.ticketId, param.billId, "0001");
+            WebBillIdResult web1 = JsonConvert.DeserializeObject<WebBillIdResult>(ReturnBookTicketResult);
+            if (web1.MESSAGE[0].IS_SUCCESS == "TRUE")
+            {
+                double price = billList.billPrice * 100;
+                double refundFee = Math.Round(billInfo.factPrice * 0.2, 1);
+                double amount = Math.Round(billInfo.factPrice * 0.8 * 100, 1);
+                if (openDao.UpdateBillInfoByRetrun(param.billId, param.id, "5", refundFee.ToString()))
+                {
+                    if (!openDao.checkBillInfo(param.billId))
+                    {
+                        openDao.UpdateBillListByRetrun(param.billId, openId, "5", "", refundFee.ToString());
+                    }
+                    return true;
+                }
+                else
+                {
+                    throw new ApiException(CodeMessage.RetrunBillError, "RetrunBillError");
+                }
+            }
+            else
+            {
+                openDao.writeLog(Global.POSCODE, openId, "BookingTicket", web1.MESSAGE[0].MESSAGE);
+                throw new ApiException(CodeMessage.GetBillIdError, "GetBillIdError");
+            }
+
+
         }
 
         /// <summary>
@@ -927,5 +945,49 @@ namespace ACBC.Buss
 
             return result;
         }
+        /// <summary>
+        /// 按票号退票
+        /// </summary>
+        /// <param name="posDateParam"></param>
+        /// <returns></returns>
+        public static String ReturnBookTicket(string posCode, string ticketId, string bookBillId, string returnType)
+        {
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PtsUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pts1.PtsServiceTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
+
+
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pts1.returnBookTicketRequestBody body = new pts1.returnBookTicketRequestBody();
+
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+            body._bookBillId = bookBillId;
+            body._ticketId = ticketId;
+            body._returnType = returnType;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pts1.returnBookTicketRequest(body);
+            //发送请求
+            var v = callClient.returnBookTicketAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.returnBookTicketResult;
+
+
+            return result;
+        }
+
+
     }
 }

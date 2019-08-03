@@ -16,7 +16,7 @@ namespace ACBC.Buss
     {
         public ApiType GetApiType()
         {
-            return ApiType.OpenApi;
+            return ApiType.WXOpenApi;
         }
         /// <summary>
         /// 登陆
