@@ -28,8 +28,8 @@ namespace ACBC.Buss
         public string GetPaymentResult(ResponseHandler resHandler)
         {
             OpenDao openDao = new OpenDao();
-            string return_code = "";
-            string return_msg = "";
+            string return_code = "SUCCESS";
+            string return_msg = "OK";
             try
             {
                 return_code = resHandler.GetParameter("return_code");
@@ -83,7 +83,7 @@ namespace ACBC.Buss
                     }
                     else
                     {
-                        pDao.insertPayLog(out_trade_no, transaction_id, total_fee, openid, "支付完成-支付金额与订单总金额不符");
+                        pDao.insertPayLog(out_trade_no, transaction_id, total_fee, openid, "支付完成-订单状态不为1或支付金额与订单总金额不符");
                     }
                 }
                 else
@@ -122,15 +122,14 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.PaymentBillError, "PaymentBillError");
             }
-
-            if (billList.billPrice * 100 == totalPrice)
+            if (billList.bookingState=="1")
             {
-                return true;
+                if (billList.billPrice * 100 == totalPrice)
+                {
+                    return true;
+                }
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
         /// <summary>
         /// 设置付款单号
