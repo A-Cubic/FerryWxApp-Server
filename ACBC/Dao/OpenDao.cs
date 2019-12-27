@@ -1,7 +1,9 @@
 ﻿using ACBC.Buss;
 using ACBC.Common;
 using Com.ACBC.Framework.Database;
+using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -225,6 +227,7 @@ namespace ACBC.Dao
                         ticketId = dr1["ticketId"].ToString(),
                         ticketState = dr1["ticketState"].ToString(),
                         refundFee =Convert.ToDouble( dr1["refundFee"].ToString()),
+                        printState = dr1["printState"].ToString(),
                     };
                     billInfoList.Add(billInfo);
                 }
@@ -803,7 +806,35 @@ namespace ACBC.Dao
 
             return returnFee;
         }
+        public bool updateBillInfoPrintState(string billId)
+        {
+            ArrayList al = new ArrayList();
+            string GetBookBillStateResult = PlanBuss.GetBookBillStateNew(Global.POSCODE, billId);
+            WebBookBillStateResult web3 = JsonConvert.DeserializeObject<WebBookBillStateResult>(GetBookBillStateResult);
+            if (web3.MESSAGE[0].IS_SUCCESS == "TRUE")
+            {
+                List<WEBBILLSTATE> billState = web3.BILLSTATE;
+                for (int i = 0; i < billState.Count; i++)
+                {
+                    if (billState[i].MARK_CODE == null || billState[i].MARK_CODE == "" || billState[i].MARK_CODE.Length == 0)
+                    {
 
+                    }
+                    else if (billState[i].MARK_CODE.Substring(0, 1).ToUpper() != "W" || billState[i].PAY_BOOK_STATE == "3")
+                    {
+                        StringBuilder builder = new StringBuilder();
+                        builder.AppendFormat(OpenSqls.UPDATE_PRINTSTATE_BY_BILLID, billId, billState[i].TICKET_ID);
+                        string sql = builder.ToString();
+                        al.Add(sql);
+                    }
+                }
+                return DatabaseOperationWeb.ExecuteDML(al);
+            }
+            else
+            {
+                return false;
+            }
+        }
         public class OpenSqls
         {
             public const string INSERT_LOG = ""
@@ -928,6 +959,9 @@ namespace ACBC.Dao
                + "SELECT SUM(REFUNDFEE) AS REFUNDFEE "
                + "FROM T_BILL_INFO "
                + "WHERE  BILLID='{0}' AND TICKETSTATE='5'   ";
+
+            public const string UPDATE_PRINTSTATE_BY_BILLID = ""
+                + " UPDATE T_BILL_INFO SET PRINTSTATE='1'  WHERE BILLID= '{0}'  AND TICKETID={1} ";
         }
     }
 }

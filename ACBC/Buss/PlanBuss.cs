@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace ACBC.Buss
 {
@@ -43,31 +44,87 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
             }
-
-            ShipWeb obj = JsonConvert.DeserializeObject<ShipWeb>(GetShipListData(posDateParam, Global.ALLOTTYPE));
-            Ship obj1 = new Ship();
-            obj1.date = posDateParam.dateFrom.Insert(4, "-").Insert(7, "-");
-            obj1.SHIPLIST = new List<SHIPLIST>();
-            if (obj.SHIPLIST != null)
+            Ship obj1 = Utils.GetCache<Ship>(posDateParam);
+            if (obj1 ==null)
             {
-                foreach (var ship in obj.SHIPLIST)
+                obj1 = new Ship();
+                ShipWeb obj = JsonConvert.DeserializeObject<ShipWeb>(GetShipListData(posDateParam, Global.ALLOTTYPE));
+
+                obj1.date = posDateParam.dateFrom.Insert(4, "-").Insert(7, "-");
+                obj1.SHIPLIST = new List<SHIPLIST>();
+                if (obj.SHIPLIST != null)
                 {
-                    bool ifNotPlan = true;
-                    for (int i = 0; i < obj1.SHIPLIST.Count; i++)
+                    foreach (var ship in obj.SHIPLIST)
                     {
-                        if (obj1.SHIPLIST[i].planId == ship.PLAN_ID)
+                        bool ifNotPlan = true;
+                        for (int i = 0; i < obj1.SHIPLIST.Count; i++)
                         {
+                            if (obj1.SHIPLIST[i].planId == ship.PLAN_ID)
+                            {
+                                try
+                                {
+                                    Grade grade = new Grade();
+                                    grade.gradeId = ship.BUNK_GRADE_ID;
+                                    grade.gradeName = ship.BUNK_GRADE_NAME;
+                                    grade.ticketLeft = ship.TICKET_LEFT;
+                                    grade.price = ship.PRICE;
+                                    grade.halfPrice = ship.HALF_PRICE;
+
+                                    obj1.SHIPLIST[i].gradeList.Add(grade);
+                                    ifNotPlan = false;
+                                }
+                                catch (Exception)
+                                {
+
+                                }
+                            }
+                        }
+                        if (ifNotPlan)
+                        {
+                            SHIPLIST shipList = new SHIPLIST();
+                            string[] ports = ship.SEAROUTE_NAME.Split("-");
+                            if (ports.Length > 1)
+                            {
+                                shipList.fromPort = ports[0];
+                                shipList.toPort = ports[1];
+                            }
                             try
                             {
+                                string[] times = ship.SAILING_TIME.Split(":");
+                                DateTime dtime = Convert.ToDateTime(ship.DEPARTURE_TIME);
+                                dtime = dtime.AddHours(Convert.ToInt16(times[0]));
+                                dtime = dtime.AddMinutes(Convert.ToInt16(times[1]));
+                                string sailing = "";
+                                if (Convert.ToInt16(times[0]) != 0)
+                                {
+                                    sailing = Convert.ToInt16(times[0]) + "小时";
+                                }
+                                if (Convert.ToInt16(times[1]) != 0)
+                                {
+                                    sailing += Convert.ToInt16(times[1]) + "分钟";
+                                }
+
+                                shipList.arriveDate = dtime.ToString("yyyy-MM-dd");
+                                shipList.arriveTime = dtime.ToString("HH:mm");
+                                shipList.berthName = ship.BERTH_NAME;
+                                shipList.departureDate = Convert.ToDateTime(ship.DEPARTURE_TIME).ToString("yyyy-MM-dd");
+                                shipList.departureTime = Convert.ToDateTime(ship.DEPARTURE_TIME).ToString("HH:mm");
+                                shipList.planId = ship.PLAN_ID;
+                                shipList.sailingTime = sailing;
+                                shipList.searouteAlise = ship.SEAROUTE_ALISE;
+                                shipList.searouteName = ship.SEAROUTE_NAME;
+                                shipList.shipName = ship.SHIP_NAME;
+                                shipList.stu = ship.STU;
+                                shipList.voyageNumber = ship.VOYAGE_NUMBER;
+                                shipList.gradeList = new List<Grade>();
                                 Grade grade = new Grade();
                                 grade.gradeId = ship.BUNK_GRADE_ID;
                                 grade.gradeName = ship.BUNK_GRADE_NAME;
                                 grade.ticketLeft = ship.TICKET_LEFT;
                                 grade.price = ship.PRICE;
                                 grade.halfPrice = ship.HALF_PRICE;
-
-                                obj1.SHIPLIST[i].gradeList.Add(grade);
-                                ifNotPlan = false;
+                                shipList.gradeList.Add(grade);
+                                obj1.SHIPLIST.Add(shipList);
                             }
                             catch (Exception)
                             {
@@ -75,60 +132,11 @@ namespace ACBC.Buss
                             }
                         }
                     }
-                    if (ifNotPlan)
-                    {
-                        SHIPLIST shipList = new SHIPLIST();
-                        string[] ports = ship.SEAROUTE_NAME.Split("-");
-                        if (ports.Length > 1)
-                        {
-                            shipList.fromPort = ports[0];
-                            shipList.toPort = ports[1];
-                        }
-                        try
-                        {
-                            string[] times = ship.SAILING_TIME.Split(":");
-                            DateTime dtime = Convert.ToDateTime(ship.DEPARTURE_TIME);
-                            dtime = dtime.AddHours(Convert.ToInt16(times[0]));
-                            dtime = dtime.AddMinutes(Convert.ToInt16(times[1]));
-                            string sailing = "";
-                            if (Convert.ToInt16(times[0]) != 0)
-                            {
-                                sailing = Convert.ToInt16(times[0]) + "小时";
-                            }
-                            if (Convert.ToInt16(times[1]) != 0)
-                            {
-                                sailing += Convert.ToInt16(times[1]) + "分钟";
-                            }
-
-                            shipList.arriveDate = dtime.ToString("yyyy-MM-dd");
-                            shipList.arriveTime = dtime.ToString("HH:mm");
-                            shipList.berthName = ship.BERTH_NAME;
-                            shipList.departureDate = Convert.ToDateTime(ship.DEPARTURE_TIME).ToString("yyyy-MM-dd");
-                            shipList.departureTime = Convert.ToDateTime(ship.DEPARTURE_TIME).ToString("HH:mm");
-                            shipList.planId = ship.PLAN_ID;
-                            shipList.sailingTime = sailing;
-                            shipList.searouteAlise = ship.SEAROUTE_ALISE;
-                            shipList.searouteName = ship.SEAROUTE_NAME;
-                            shipList.shipName = ship.SHIP_NAME;
-                            shipList.stu = ship.STU;
-                            shipList.voyageNumber = ship.VOYAGE_NUMBER;
-                            shipList.gradeList = new List<Grade>();
-                            Grade grade = new Grade();
-                            grade.gradeId = ship.BUNK_GRADE_ID;
-                            grade.gradeName = ship.BUNK_GRADE_NAME;
-                            grade.ticketLeft = ship.TICKET_LEFT;
-                            grade.price = ship.PRICE;
-                            grade.halfPrice = ship.HALF_PRICE;
-                            shipList.gradeList.Add(grade);
-                            obj1.SHIPLIST.Add(shipList);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }
                 }
+                obj1.Unique = posDateParam.GetUnique();
+                Utils.SetCache(obj1,0,0,10);
             }
+            
 
             return obj1;
         }
@@ -375,10 +383,11 @@ namespace ACBC.Buss
             }
             string openId = Utils.GetOpenID(baseApi.token);
             OpenDao openDao = new OpenDao();
-
+            //新增同步是否取票
+            openDao.updateBillInfoPrintState(param.billId);
             //处理10分取消未支付订单
             openDao.UpdateBookingStatusBy10Minute(openId);
-
+            
             return openDao.getBillListById(param.billId, openId);
         }
         /// <summary>

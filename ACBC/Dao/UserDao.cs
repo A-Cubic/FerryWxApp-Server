@@ -27,8 +27,9 @@ namespace ACBC.Dao
             return "";
         }
 
-        public List<Banner> getBanner(string posCode)
+        public BannerList getBanner(string posCode)
         {
+            BannerList bannerList = new BannerList();
             List<Banner> list = new List<Banner>();
             StringBuilder builder = new StringBuilder();
             builder.AppendFormat(ShipSqls.SELECT_BANNER_BY_POSCODE, posCode, "BANNER");
@@ -50,7 +51,8 @@ namespace ACBC.Dao
                     list.Add(banner);
                 }
             }
-            return list;
+            bannerList.lb = list;
+            return bannerList;
         }
         public List<Banner> getNews(string posCode)
         {

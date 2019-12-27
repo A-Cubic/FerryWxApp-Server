@@ -108,7 +108,7 @@ namespace ACBC.Buss
     //    public string posCode;
     //}
 
-    public class PosDateParam
+    public class PosDateParam : BussParam
     {
         //public string posCode;
         public string dateFrom;
@@ -200,7 +200,7 @@ namespace ACBC.Buss
         public string scanCode;
         public string sex;
     }
-    public class Port
+    public class Port : BussCache
     {
         public List<PORTLIST> PORTLIST;
     }
@@ -212,7 +212,7 @@ namespace ACBC.Buss
     {
         public List<SHIPLISTWEB> SHIPLIST;
     }
-    public class Ship
+    public class Ship : BussCache
     {
         public string date;
         public List<SHIPLIST> SHIPLIST;
@@ -282,8 +282,11 @@ namespace ACBC.Buss
         public string price;//票价
         public string halfPrice;//半价票价
     }
-
-    public class Banner
+    public class BannerList: BussCache
+    {
+        public List<Banner> lb;
+    }
+    public class Banner : BussCache
     {
         public string sort;//序号
         public string advname;//名称
@@ -391,6 +394,7 @@ namespace ACBC.Buss
         public string ticketId;
         public string ticketState;
         public double refundFee;
+        public string printState;
     }
     public class PAY
     {

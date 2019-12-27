@@ -131,7 +131,12 @@ namespace ACBC.Buss
 
             //    Utils.SetCache("PORT",obj, 0, 1, 0);
             //}
-            Port obj = JsonConvert.DeserializeObject<Port>(GetPostListData(Global.POSCODE));
+            Port obj = Utils.GetCache<Port>("port");
+            if (obj==null)
+            {
+                obj = JsonConvert.DeserializeObject<Port>(GetPostListData(Global.POSCODE));
+                Utils.SetCache("port",obj, 0, 1, 0);
+            }
             List<string> list = new List<string>();
             foreach (var item in obj.PORTLIST)
             {
@@ -157,8 +162,13 @@ namespace ACBC.Buss
             //    throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
             //}
             UserDao userDao = new UserDao();
-
-            return userDao.getBanner(Global.POSCODE);
+            BannerList bannerList =  Utils.GetCache<BannerList>("banner");
+            if (bannerList == null)
+            {
+                bannerList = userDao.getBanner(Global.POSCODE);
+                Utils.SetCache("banner",bannerList, 0, 1, 0);
+            }
+            return bannerList.lb;
         }
 
         /// <summary>
