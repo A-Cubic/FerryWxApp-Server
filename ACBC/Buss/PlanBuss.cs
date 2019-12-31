@@ -188,10 +188,21 @@ namespace ACBC.Buss
             {
                 throw new ApiException(CodeMessage.MemberStatusError, "MemberStatusError");
             }
-            if (!openDao.ifBooking(param.planId,Global.IfBookingTime))
+            //判断船是否是开航前多少分钟所以不能订票
+            int time = 0;
+            int.TryParse(Global.IfBookingTime, out time);
+            IfSuspend obj = JsonConvert.DeserializeObject<IfSuspend>(OpenBuss.GetIfSuspend(Global.POSCODE, time, param.planId));
+            if (obj.PORTLIST.Count>0)
             {
-                throw new ApiException(CodeMessage.BookingTicketError, "BookingTicketError");
+                if (obj.PORTLIST[0].COUNT=="0")
+                {
+                    throw new ApiException(CodeMessage.TimeError, "TimeError");
+                }
             }
+            //if (!openDao.ifBooking(param.planId,Global.IfBookingTime))
+            //{
+            //    throw new ApiException(CodeMessage.TimeError, "TimeError");
+            //}
             //try
             //{
             //先判断订票用户和账号是否匹配。
@@ -887,14 +898,14 @@ namespace ACBC.Buss
             // 根据 WebService 的 URL 构建终端点对象
             var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PtsUrl"));
             // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
-            var factory = new ChannelFactory<pts1.PtsServiceTJSoap>(binding, endpoint);
+            var factory = new ChannelFactory<pts.PtsServiceTJSoap>(binding, endpoint);
             // 从工厂获取具体的调用实例
             var callClient = factory.CreateChannel();
 
 
 
             //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
-            pts1.returnBookTicketRequestBody body = new pts1.returnBookTicketRequestBody();
+            pts.returnBookTicketRequestBody body = new pts.returnBookTicketRequestBody();
 
             //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
             body._posCode = posCode;
@@ -903,7 +914,7 @@ namespace ACBC.Buss
             body._returnType = returnType;
 
             //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
-            var request = new pts1.returnBookTicketRequest(body);
+            var request = new pts.returnBookTicketRequest(body);
             //发送请求
             var v = callClient.returnBookTicketAsync(request);
 

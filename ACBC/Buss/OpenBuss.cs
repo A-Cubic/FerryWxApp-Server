@@ -132,10 +132,10 @@ namespace ACBC.Buss
             //    Utils.SetCache("PORT",obj, 0, 1, 0);
             //}
             Port obj = Utils.GetCache<Port>("port");
-            if (obj==null)
+            if (obj == null)
             {
                 obj = JsonConvert.DeserializeObject<Port>(GetPostListData(Global.POSCODE));
-                Utils.SetCache("port",obj, 0, 1, 0);
+                Utils.SetCache("port", obj, 0, 1, 0);
             }
             List<string> list = new List<string>();
             foreach (var item in obj.PORTLIST)
@@ -143,6 +143,29 @@ namespace ACBC.Buss
                 list.Add(item.PORT_CNAME);
             }
             return list;
+        }
+
+        /// <summary>
+        /// 获取是否停航
+        /// </summary>
+        /// <param name="baseApi"></param>
+        /// <returns></returns>
+        public object Do_CheckPlan(BaseApi baseApi)
+        { 
+            IfSuspend obj = Utils.GetCache<IfSuspend>("IfSuspend");
+            if (obj == null)
+            {
+                int time = 0;
+                int.TryParse(Global.IfBookingTime, out time);
+                obj = JsonConvert.DeserializeObject<IfSuspend>(GetIfSuspend(Global.POSCODE, time, ""));
+                Utils.SetCache("IfSuspend", obj, 0, 1, 0);
+            }
+            string IfSuspend = "0";
+            foreach (var item in obj.PORTLIST)
+            {
+                IfSuspend = item.COUNT;
+            }
+            return IfSuspend;
         }
 
         /// <summary>
@@ -235,6 +258,26 @@ namespace ACBC.Buss
             return userDao.getTel(Global.POSCODE);
         }
 
+        /// <summary>
+        /// 获取注意事项
+        /// </summary>
+        /// <param name="baseApi"></param>
+        /// <returns></returns>
+        public object Do_GetAttention(BaseApi baseApi)
+        {
+            //PosParam posParam = JsonConvert.DeserializeObject<PosParam>(baseApi.param.ToString());
+            //if (posParam == null)
+            //{
+            //    throw new ApiException(CodeMessage.InvalidParam, "InvalidParam");
+            //}
+            //if (posParam.posCode == null || posParam.posCode == "")
+            //{
+            //    throw new ApiException(CodeMessage.InterfaceValueError, "InterfaceValueError");
+            //}
+            UserDao userDao = new UserDao();
+
+            return userDao.getAttention(Global.POSCODE);
+        }
 
 
         /// <summary>
@@ -279,6 +322,56 @@ namespace ACBC.Buss
 
             //获取数据
             result = v.Result.Body.getPortResult;
+
+
+            return result;
+        }
+
+
+        /// <summary>
+        /// 获取是否都已经停航
+        /// </summary>
+        /// <param name="posCode"></param>
+        /// <returns></returns>
+        public static String GetIfSuspend(string posCode, int time, string planId)
+        {
+            string result = "";
+            // 创建 HTTP 绑定对象
+            var binding = new BasicHttpBinding();
+            // 根据 WebService 的 URL 构建终端点对象
+            var endpoint = new EndpointAddress(System.Environment.GetEnvironmentVariable("PtsUrl"));
+            // 创建调用接口的工厂，注意这里泛型只能传入接口 添加服务引用时生成的 webservice的接口 一般是 (XXXSoap)
+            var factory = new ChannelFactory<pts.PtsServiceTJSoap>(binding, endpoint);
+            // 从工厂获取具体的调用实例
+            var callClient = factory.CreateChannel();
+
+            ////发送请求
+            //var v = callClient.getPortAsync(posCode);
+
+            ////异步等待
+            //v.Wait();
+            ////获取数据
+            //result = v.Result;
+            //return result;
+
+            //调用的对应webservice 服务类的函数生成对应的请求类Body (一般是webservice 中对应的方法+RequestBody  如GetInfoListRequestBody)
+            pts.getIfSuspendRequestBody body = new pts.getIfSuspendRequestBody();
+
+            //以下是为该请求body添加对应的参数（就是调用webService中对应的方法的参数）
+            body._posCode = posCode;
+            body._time = time;
+            body._plan = planId;
+
+            //获取请求对象 （一般是webservice 中对应的方法+tRequest  如GetInfoListRequest）
+            var request = new pts.getIfSuspendRequest(body);
+            //发送请求
+            var v = callClient.getIfSuspendAsync(request);
+
+            //异步等待
+            v.Wait();
+
+            //获取数据
+            result = v.Result.Body.getIfSuspendResult;
 
 
             return result;

@@ -208,6 +208,14 @@ namespace ACBC.Buss
     {
         public string PORT_CNAME;
     }
+    public class IfSuspend : BussCache
+    {
+        public List<PORTLIST1> PORTLIST;
+    }
+    public class PORTLIST1
+    {
+        public string COUNT;
+    }
     public class ShipWeb
     {
         public List<SHIPLISTWEB> SHIPLIST;
@@ -375,6 +383,7 @@ namespace ACBC.Buss
         public string prePayId;
         public string prePayTime;
         public string payNo;
+        public string printState;
         public List<BILLINFO> billInfoList;
     }
     public class BILLINFO

@@ -417,11 +417,11 @@ namespace pay
         {
             if ((endpointConfiguration == EndpointConfiguration.PayTJSoap))
             {
-                return new System.ServiceModel.EndpointAddress("http://112.126.92.32:9281/PayTJ.asmx");
+                return new System.ServiceModel.EndpointAddress("http://39.100.237.7:9281/PayTJ.asmx");
             }
             if ((endpointConfiguration == EndpointConfiguration.PayTJSoap12))
             {
-                return new System.ServiceModel.EndpointAddress("http://112.126.92.32:9281/PayTJ.asmx");
+                return new System.ServiceModel.EndpointAddress("http://39.100.237.7:9281/PayTJ.asmx");
             }
             throw new System.InvalidOperationException(string.Format("找不到名称为“{0}”的终结点。", endpointConfiguration));
         }

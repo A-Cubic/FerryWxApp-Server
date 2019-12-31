@@ -49,6 +49,7 @@ namespace ACBC.Common
         MemberStatusError = 20008,//用户被禁用
         PassengerNumError = 20009,//订票人超过5个
         OnePlanError = 20010,//已订同航次船票
+        TimeError = 20011,//距离开航时间小于设定的禁买时间
 
         AddPassengerError = 30000,//新增乘客失败
         DelPassengerError = 30001,//删除乘客失败

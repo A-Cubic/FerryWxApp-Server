@@ -205,6 +205,18 @@ namespace ACBC.Dao
             telResult.tellist = list;
             return telResult;
         }
+        public string getAttention(string posCode)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendFormat(ShipSqls.SELECT_ATTENTION_BY_POSCODE, posCode);
+            string sql = builder.ToString();
+            DataTable dt = DatabaseOperationWeb.ExecuteSelectDS(sql, "T").Tables[0];
+            if (dt != null)
+            {
+                return dt.Rows[0][0].ToString();
+            }
+            return "";
+        }
 
         public class ShipSqls
         {
@@ -228,6 +240,7 @@ namespace ACBC.Dao
                                         "WHERE FLAG='1' AND POSCODE = '{0}' AND OPENID = '{1}' AND PASSENGERCARD = '{2}'";
             public const string SELECT_TEL_BY_POSCODE = "SELECT * FROM T_BASE_TEL " +
                                         "WHERE POSCODE = '{0}'";
+            public const string SELECT_ATTENTION_BY_POSCODE = "SELECT IMGURL FROM T_ADV_LIST WHERE FLAG='1' AND POSCODE = '{0}' AND ADVTYPE ='ATTENTION' ";
         }
 
 

@@ -246,12 +246,22 @@ namespace ACBC.Dao
                     sailing +=ts.Minutes + "分钟";
                 }
                 string state = "待支付";
-                if (dr["bookingState"].ToString()=="2" || dr["bookingState"].ToString()=="4")
+                if (dr["bookingState"].ToString() == "2" || dr["bookingState"].ToString() == "4")
                 {
                     state = "已支付";
-                }else if (dr["bookingState"].ToString() == "3" || dr["bookingState"].ToString() == "5")
+                }
+                else if (dr["bookingState"].ToString() == "3" || dr["bookingState"].ToString() == "5")
                 {
                     state = "已退票";
+                }
+                string printState = "待支付";
+                if (dr["printState"].ToString() == "0" )
+                {
+                    printState = "";
+                }
+                else if (dr["printState"].ToString() == "1" )
+                {
+                    printState = " 已有票被打出";
                 }
                 billList = new BILLLIST
                 {
@@ -278,6 +288,7 @@ namespace ACBC.Dao
                     prePayTime = dr["prePayTime"].ToString(),
                     billInfoList = billInfoList,
                     payNo = dr["payNo"].ToString(),
+                    printState = printState,
                 };
             }
             return billList;
@@ -461,6 +472,13 @@ namespace ACBC.Dao
             {
                 foreach (DataRow dr in dtP.Rows)
                 {
+                    if (dr["printState"].ToString()=="0")
+                    {
+                        //新增同步是否取票
+                        updateBillInfoPrintState(dr["BILLID"].ToString());
+                    }
+                    
+
                     List<BILLINFO> billInfoList = new List<BILLINFO>();
                     StringBuilder builder1 = new StringBuilder();
                     builder1.AppendFormat(OpenSqls.SELECT_BILLINFO_BY_BILLID, dr["BILLID"].ToString());
@@ -503,6 +521,16 @@ namespace ACBC.Dao
 
                     DateTime btime = Convert.ToDateTime(dr["beginTime"]);
                     DateTime etime = Convert.ToDateTime(dr["endTime"]);
+
+                    string printState = "";
+                    if (dr["printState"].ToString() == "0")
+                    {
+                        printState = "";
+                    }
+                    else if (dr["printState"].ToString() == "1")
+                    {
+                        printState = " 已有票被打出";
+                    }
                     BILLLIST billList = new BILLLIST
                     {
                         id = dr["id"].ToString(),
@@ -524,6 +552,7 @@ namespace ACBC.Dao
                         bookingPhone = dr["bookingPhone"].ToString(),
                         bookingCard = dr["bookingCard"].ToString(),
                         billInfoList = billInfoList,
+                        printState = printState,
                     };
                     paid.Add(billList);
                 }
@@ -823,9 +852,13 @@ namespace ACBC.Dao
                     else if (billState[i].MARK_CODE.Substring(0, 1).ToUpper() != "W" || billState[i].PAY_BOOK_STATE == "3")
                     {
                         StringBuilder builder = new StringBuilder();
-                        builder.AppendFormat(OpenSqls.UPDATE_PRINTSTATE_BY_BILLID, billId, billState[i].TICKET_ID);
+                        builder.AppendFormat(OpenSqls.UPDATE_BILLINOF_PRINTSTATE_BY_BILLID, billId, billState[i].TICKET_ID);
                         string sql = builder.ToString();
                         al.Add(sql);
+                        StringBuilder builder1 = new StringBuilder();
+                        builder1.AppendFormat(OpenSqls.UPDATE_BILLLIST_PRINTSTATE_BY_BILLID, billId);
+                        string sql1 = builder1.ToString();
+                        al.Add(sql1);
                     }
                 }
                 return DatabaseOperationWeb.ExecuteDML(al);
@@ -960,8 +993,10 @@ namespace ACBC.Dao
                + "FROM T_BILL_INFO "
                + "WHERE  BILLID='{0}' AND TICKETSTATE='5'   ";
 
-            public const string UPDATE_PRINTSTATE_BY_BILLID = ""
+            public const string UPDATE_BILLINOF_PRINTSTATE_BY_BILLID = ""
                 + " UPDATE T_BILL_INFO SET PRINTSTATE='1'  WHERE BILLID= '{0}'  AND TICKETID={1} ";
+            public const string UPDATE_BILLLIST_PRINTSTATE_BY_BILLID = ""
+                + " UPDATE T_BILL_LIST SET PRINTSTATE='1'  WHERE BILLID= '{0}' ";
         }
     }
 }
